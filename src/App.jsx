@@ -59,9 +59,9 @@ function PersonGlyph({ you }) {
 
 function RankRow({ rank, personaId, graaier, label }) {
   const youSlot = Math.round(((rank - 1) / 99) * (CROWD_SIZE - 1))
+  const janModaalSlot = Math.round((CROWD_SIZE - 1) / 2)
   const zoneSlots = Math.max(1, Math.round(CROWD_SIZE * PROFITEUR_SHARE))
   const zonePct = PROFITEUR_SHARE * 100
-  const medianPct = 50
   const role = graaier ? 'graaier' : 'profiteur'
 
   return (
@@ -73,7 +73,7 @@ function RankRow({ rank, personaId, graaier, label }) {
       <div
         className="rank-row"
         role="img"
-        aria-label={`Profiteur of graaier: ${label}, plek ${rank} van 100`}
+        aria-label={`Profiteur of graaier: ${label}, plek ${rank} van 100. Jan Modaal in het midden.`}
       >
         <div
           className="profiteur-zone"
@@ -83,20 +83,24 @@ function RankRow({ rank, personaId, graaier, label }) {
         <div className="zone-line" style={{ left: `${zonePct}%` }}>
           <span>≥ €1</span>
         </div>
-        <div className="median-line" style={{ left: `${medianPct}%` }}>
-          <span>Mediaan</span>
-        </div>
         {Array.from({ length: CROWD_SIZE }, (_, i) => {
           const you = i === youSlot
+          const janModaal = i === janModaalSlot
           const inZone = i < zoneSlots
           return (
             <div
               key={`${personaId}-${i}`}
-              className={`dot ${you ? 'you' : ''} ${inZone ? 'profiteur' : 'betaler'} ${i < youSlot ? 'before' : ''}`}
+              className={`dot ${you ? 'you' : ''} ${janModaal ? 'jan-modaal' : ''} ${inZone ? 'profiteur' : 'betaler'} ${i < youSlot ? 'before' : ''}`}
               style={{ animationDelay: `${i * 12}ms` }}
             >
               {you && <em className="you-tag">{label}</em>}
-              <PersonGlyph you={you} />
+              {janModaal && !you && (
+                <em className="you-tag jan-tag">Jan Modaal</em>
+              )}
+              {janModaal && you && (
+                <em className="you-tag jan-tag stacked">Jan Modaal</em>
+              )}
+              <PersonGlyph you={you || janModaal} />
             </div>
           )
         })}

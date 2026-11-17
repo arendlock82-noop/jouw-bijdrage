@@ -183,28 +183,17 @@
   z-index: 0;
 }
 
-.zone-line,
-.median-line {
+.zone-line {
   position: absolute;
   top: -0.15rem;
   bottom: -0.15rem;
   width: 0;
-  border-left: 2px solid rgba(16, 36, 31, 0.35);
+  border-left: 2px solid var(--sea);
   z-index: 3;
   pointer-events: none;
 }
 
-.zone-line {
-  border-left-color: var(--sea);
-}
-
-.median-line {
-  border-left-style: dotted;
-  border-left-color: rgba(16, 36, 31, 0.45);
-}
-
-.zone-line span,
-.median-line span {
+.zone-line span {
   position: absolute;
   top: -1.15rem;
   left: 50%;
@@ -215,15 +204,10 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
   background: rgba(255, 255, 255, 0.92);
-  border: 1px solid var(--line);
+  border: 1px solid rgba(31, 122, 108, 0.3);
   border-radius: 999px;
   padding: 0.1rem 0.4rem;
-  color: var(--ink-soft);
-}
-
-.zone-line span {
   color: var(--sea-deep);
-  border-color: rgba(31, 122, 108, 0.3);
 }
 
 .ladder-note {
@@ -269,7 +253,8 @@
   fill: #b3c4bb;
 }
 
-.dot.you {
+.dot.you,
+.dot.jan-modaal {
   z-index: 4;
   overflow: visible;
 }
@@ -280,9 +265,20 @@
   filter: drop-shadow(0 6px 10px rgba(20, 90, 80, 0.35));
 }
 
+.dot.jan-modaal:not(.you) svg {
+  max-width: 28px;
+  height: auto;
+  filter: drop-shadow(0 4px 8px rgba(16, 36, 31, 0.2));
+}
+
 .dot.you svg .head,
 .dot.you svg .body {
   fill: var(--sea-deep);
+}
+
+.dot.jan-modaal:not(.you) svg .head,
+.dot.jan-modaal:not(.you) svg .body {
+  fill: #5c6b63;
 }
 
 .you-tag {
@@ -301,6 +297,15 @@
   white-space: nowrap;
   box-shadow: 0 4px 12px rgba(16, 36, 31, 0.1);
   z-index: 5;
+}
+
+.you-tag.jan-tag {
+  color: #3d4a44;
+  border-color: rgba(16, 36, 31, 0.22);
+}
+
+.you-tag.jan-tag.stacked {
+  top: -2.35rem;
 }
 
 .rank-marker {
