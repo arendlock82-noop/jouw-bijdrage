@@ -18,27 +18,39 @@ import {
 import './App.css'
 
 const CROWD_SIZE = 48
-/** Speelse regel: ≥ €1 belasting betaald = graaier. */
-const GRAAIER_FROM_EURO = 1
-/** Tiny zone links: wie (bijna) niets betaalt. */
+/** Tiny zone links: bijna geen belasting. */
 const PROFITEUR_SHARE = 0.04
 const NATIONAL_MAX_MLD = Math.max(
   officialRevenueTotalMld,
   officialExpenditureTotalMld,
 )
 
-/** Ladder: weinig/geen belasting links, grotere betalers rechts = grotere “graaiers”. */
+/** Betaald door (Jan)Modaal — anker zodat hij rond het midden van de ladder staat. */
+const MODAAL_PAID = computeFromInputs(
+  ladderBenchmarks.find((b) => b.id === 'modaal').inputs,
+).paidTotal
+
+/**
+ * Ladder op betaalde belasting, geijkt op (Jan)Modaal ≈ plek 50.
+ * Zo zitten modus/mediaan niet onecht ver links.
+ */
 function taxLadderRank(paidTotal) {
-  if (paidTotal < GRAAIER_FROM_EURO) return 1
-  // €1 → plek ~5, €60k → ~100
+  const paid = Math.max(0, Number(paidTotal) || 0)
+  if (paid <= 0) return 1
+  const anchor = Math.max(MODAAL_PAID, 1)
+  if (paid <= anchor) {
+    return Math.max(1, Math.round((paid / anchor) * 50))
+  }
+  const top = anchor * 5
   return Math.min(
     100,
-    Math.max(5, Math.round(5 + (paidTotal / 60000) * 95)),
+    Math.round(50 + ((paid - anchor) / (top - anchor)) * 50),
   )
 }
 
-function isGraaier(paidTotal) {
-  return paidTotal >= GRAAIER_FROM_EURO
+/** Graaier = netto betaler (meer inleg dan persoonlijk terug). */
+function isGraaier(paidTotal, receivedTotal) {
+  return (Number(paidTotal) || 0) > (Number(receivedTotal) || 0)
 }
 
 /** Duidelijk poppetje: hoofd + schouders/lijf. */
@@ -62,25 +74,59 @@ function rankToSlot(rank) {
   return Math.round(((rank - 1) / 99) * (CROWD_SIZE - 1))
 }
 
-/** Benchmarks: zelfde engine als personas → plek o.b.v. echte betaalde belasting. */
-const JAN_MARKERS = ladderBenchmarks.map((b) => {
-  const calc = computeFromInputs(b.inputs)
+function buildMarker(id, tagLabel, inputs, kind) {
+  const calc = computeFromInputs(inputs)
   const rank = taxLadderRank(calc.paidTotal)
   return {
-    ...b,
+    id,
+    kind,
+    tagLabel,
+    inputs,
     paidTotal: calc.paidTotal,
+    receivedTotal: calc.receivedTotal,
+    graaier: isGraaier(calc.paidTotal, calc.receivedTotal),
     rank,
     slot: rankToSlot(rank),
   }
-})
+}
 
-function RankRow({ rank, personaId, graaier, label }) {
+const JAN_MARKERS = ladderBenchmarks.map((b) =>
+  buildMarker(b.id, b.tagLabel, b.inputs, 'jan'),
+)
+
+const PERSONA_MARKERS = personas.map((p) =>
+  buildMarker(p.id, p.name, p.inputs, 'persona'),
+)
+
+/** Voorkom dat markers exact op elkaar vallen: schuif dubbele slots uit elkaar. */
+function spreadSlots(markers) {
+  const sorted = [...markers].sort((a, b) => a.rank - b.rank || a.id.localeCompare(b.id))
+  const used = new Set()
+  return sorted.map((m) => {
+    let slot = m.slot
+    while (used.has(slot) && slot < CROWD_SIZE - 1) slot += 1
+    while (used.has(slot) && slot > 0) slot -= 1
+    used.add(slot)
+    return { ...m, slot }
+  })
+}
+
+const LADDER_MARKERS = spreadSlots([...PERSONA_MARKERS, ...JAN_MARKERS])
+
+function RankRow({
+  rank,
+  activeId,
+  graaier,
+  label,
+  onSelectMarker,
+}) {
   const youSlot = rankToSlot(rank)
   const zoneSlots = Math.max(1, Math.round(CROWD_SIZE * PROFITEUR_SHARE))
   const zonePct = PROFITEUR_SHARE * 100
   const role = graaier ? 'graaier' : 'profiteur'
+
   const markersBySlot = new Map()
-  for (const m of JAN_MARKERS) {
+  for (const m of LADDER_MARKERS) {
     const list = markersBySlot.get(m.slot) || []
     list.push(m)
     markersBySlot.set(m.slot, list)
@@ -94,57 +140,58 @@ function RankRow({ rank, personaId, graaier, label }) {
       </div>
       <div
         className="rank-row"
-        role="img"
-        aria-label={`Profiteur of graaier: ${label}, plek ${rank} van 100. Met (Jan)Modaal en (Jan)Mediaan.`}
+        role="list"
+        aria-label={`Ladder: ${label}, plek ${rank} van 100. Klik op een poppetje om die situatie te openen.`}
       >
         <div
           className="profiteur-zone"
           style={{ width: `${zonePct}%` }}
-          title="Wie (bijna) geen belasting betaalt"
+          title="Bijna geen belasting"
         />
-        <div className="zone-line" style={{ left: `${zonePct}%` }}>
-          <span>≥ €1</span>
-        </div>
         {Array.from({ length: CROWD_SIZE }, (_, i) => {
-          const you = i === youSlot
-          const jans = markersBySlot.get(i) || []
-          const hasJan = jans.length > 0
+          const markers = markersBySlot.get(i) || []
+          const activeHere = markers.some((m) => m.id === activeId)
+          const youHere = i === youSlot && !markers.some((m) => m.id === activeId)
+          const highlighted = activeHere || youHere
           const inZone = i < zoneSlots
           return (
             <div
-              key={`${personaId}-${i}`}
-              className={`dot ${you ? 'you' : ''} ${hasJan ? 'jan-modaal' : ''} ${inZone ? 'profiteur' : 'betaler'} ${i < youSlot ? 'before' : ''}`}
+              key={`slot-${i}`}
+              className={`dot ${highlighted ? 'you' : ''} ${markers.length ? 'marked' : ''} ${inZone ? 'profiteur' : 'betaler'}`}
               style={{ animationDelay: `${i * 12}ms` }}
-              title={
-                hasJan
-                  ? jans
-                      .map(
-                        (j) =>
-                          `${j.tagLabel}: ${euro(j.inputs.brutoJaar)} bruto → ${euro(j.paidTotal)} belasting (plek ${j.rank})`,
-                      )
-                      .join(' · ')
-                  : undefined
-              }
             >
-              {you && <em className="you-tag">{label}</em>}
-              {jans.map((j, ji) => (
-                <em
-                  key={j.id}
-                  className={`you-tag jan-tag ${j.id === 'mediaan' ? 'mediaan' : 'modaal'}${you || ji > 0 ? ' stacked' : ''}${you && ji > 0 ? ' stacked-2' : ''}`}
-                  style={
-                    you || ji > 0
-                      ? {
-                          top: you
-                            ? `${-1.15 - (ji + 1) * 1.2}rem`
-                            : `${-1.15 - ji * 1.2}rem`,
-                        }
-                      : undefined
-                  }
-                >
-                  {j.tagLabel}
-                </em>
-              ))}
-              <PersonGlyph you={you || hasJan} />
+              {youHere && (
+                <em className="you-tag active-tag">{label}</em>
+              )}
+              {markers.map((m, mi) => {
+                const active = m.id === activeId
+                const tagClass =
+                  m.kind === 'jan'
+                    ? `you-tag jan-tag ${m.id === 'mediaan' ? 'mediaan' : 'modaal'}${active ? ' active-tag' : ''}`
+                    : `you-tag persona-tag${active ? ' active-tag' : ''}`
+                // Mediaan altijd hoger, daarna andere labels gestapeld
+                const lift =
+                  m.kind === 'jan' && m.id === 'mediaan'
+                    ? 2.55
+                    : m.kind === 'jan' && m.id === 'modaal'
+                      ? 1.35
+                      : 1.15 + mi * 1.15 + (youHere ? 1.15 : 0)
+                return (
+                  <button
+                    key={m.id}
+                    type="button"
+                    className={`marker-hit ${active ? 'active' : ''}`}
+                    style={{ '--tag-top': `-${lift}rem` }}
+                    onClick={() => onSelectMarker(m)}
+                    title={`${m.tagLabel}: ${euro(m.paidTotal)} belasting · plek ${m.rank}`}
+                    aria-label={`${m.tagLabel} selecteren`}
+                  >
+                    <em className={tagClass}>{m.tagLabel}</em>
+                    <PersonGlyph you={active || highlighted} />
+                  </button>
+                )
+              })}
+              {!markers.length && <PersonGlyph you={youHere} />}
             </div>
           )
         })}
@@ -158,10 +205,11 @@ function RankRow({ rank, personaId, graaier, label }) {
         </span>
       </div>
       <p className="ladder-note">
-        <strong>(Jan)Modaal</strong> = CPB €48.000 ·{' '}
-        <strong>(Jan)Mediaan</strong> = CBS €46.200 (werkenden, 2024). Beide
-        door dezelfde rekenmachine — plek volgt uit wat ze betalen. Speelse
-        labels: vanaf <strong>€1</strong> ben je hier een graaier.
+        <strong>(Jan)Modaal</strong> ≈ midden (CPB €48.000) ·{' '}
+        <strong>(Jan)Mediaan</strong> iets links (CBS €46.200). Klik op een
+        naam/poppetje om die situatie te openen. Speelse regel: meer betalen
+        dan je persoonlijk terugkrijgt = <strong>graaier</strong>, anders{' '}
+        <strong>profiteur</strong>.
       </p>
     </div>
   )
@@ -711,39 +759,67 @@ function SourcesPanel() {
 
 export default function App() {
   const [personaId, setPersonaId] = useState('student')
+  const [janId, setJanId] = useState(null)
   const [customMode, setCustomMode] = useState(false)
   const [inputs, setInputs] = useState(() =>
     cloneInputs(personas.find((p) => p.id === 'student').inputs),
   )
 
   const persona = personas.find((p) => p.id === personaId) ?? personas[0]
+  const jan = janId
+    ? ladderBenchmarks.find((b) => b.id === janId)
+    : null
 
   const selectPersona = (id) => {
     const p = personas.find((x) => x.id === id)
     if (!p) return
     setPersonaId(id)
+    setJanId(null)
     setInputs(cloneInputs(p.inputs))
     setCustomMode(false)
   }
 
+  const selectJan = (id) => {
+    const b = ladderBenchmarks.find((x) => x.id === id)
+    if (!b) return
+    setJanId(id)
+    setPersonaId(null)
+    setInputs(cloneInputs(b.inputs))
+    setCustomMode(false)
+  }
+
+  const onSelectMarker = (marker) => {
+    if (marker.kind === 'jan') selectJan(marker.id)
+    else selectPersona(marker.id)
+  }
+
   const onChange = (key, value) => {
     setCustomMode(true)
+    setJanId(null)
+    if (!personaId) setPersonaId('student')
     setInputs((prev) => ({ ...prev, [key]: value }))
   }
 
   const calc = useMemo(() => computeFromInputs(inputs), [inputs])
 
   const rank = taxLadderRank(calc.paidTotal)
-  const graaier = isGraaier(calc.paidTotal)
+  const graaier = isGraaier(calc.paidTotal, calc.receivedTotal)
   const allocated = useMemo(
     () => allocatePaidToSpend(calc.paidTotal),
     [calc.paidTotal],
   )
 
-  const title = customMode ? 'Jouw situatie' : persona.name
+  const activeId = customMode ? null : janId || personaId
+  const title = customMode
+    ? 'Jouw situatie'
+    : jan
+      ? jan.tagLabel
+      : persona.name
   const tagline = customMode
     ? 'Pas je situatie aan — toeslagen en box 1 volgen automatisch (regels 2026).'
-    : persona.tagline
+    : jan
+      ? jan.tip
+      : persona.tagline
 
   return (
     <div className="shell">
@@ -763,7 +839,7 @@ export default function App() {
           <button
             key={p.id}
             type="button"
-            className={p.id === personaId && !customMode ? 'active' : ''}
+            className={p.id === personaId && !customMode && !janId ? 'active' : ''}
             onClick={() => selectPersona(p.id)}
           >
             <strong>{p.name}</strong>
@@ -773,7 +849,11 @@ export default function App() {
         <button
           type="button"
           className={customMode ? 'active custom' : 'custom'}
-          onClick={() => setCustomMode(true)}
+          onClick={() => {
+            setCustomMode(true)
+            setJanId(null)
+            if (!personaId) setPersonaId('student')
+          }}
         >
           <strong>Eigen situatie</strong>
           <span>Inkomen, woning, kids</span>
@@ -793,9 +873,10 @@ export default function App() {
         </div>
         <RankRow
           rank={rank}
-          personaId={customMode ? 'custom' : personaId}
+          activeId={activeId}
           graaier={graaier}
           label={title}
+          onSelectMarker={onSelectMarker}
         />
       </section>
 
@@ -827,8 +908,14 @@ export default function App() {
           onChange={onChange}
           customMode={customMode}
           onToggleCustom={(v) => {
-            if (!v) selectPersona(personaId)
-            else setCustomMode(true)
+            if (!v) {
+              if (janId) selectJan(janId)
+              else selectPersona(personaId || 'student')
+            } else {
+              setCustomMode(true)
+              setJanId(null)
+              if (!personaId) setPersonaId('student')
+            }
           }}
         />
 

@@ -140,6 +140,7 @@
 .rank-row-wrap {
   position: relative;
   padding-bottom: 2.4rem;
+  padding-top: 2.6rem;
 }
 
 .rank-ends {
@@ -162,6 +163,48 @@
   border-radius: 18px;
   background: linear-gradient(180deg, rgba(16, 36, 31, 0.04), transparent);
   overflow: visible;
+}
+
+.marker-hit {
+  position: relative;
+  display: grid;
+  place-items: end center;
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  z-index: 6;
+}
+
+.marker-hit .you-tag {
+  top: var(--tag-top, -1.15rem);
+  pointer-events: none;
+}
+
+.marker-hit:hover .you-tag,
+.marker-hit:focus-visible .you-tag {
+  transform: translateX(-50%) translateY(-2px);
+  box-shadow: 0 6px 14px rgba(16, 36, 31, 0.16);
+}
+
+.marker-hit:focus-visible {
+  outline: none;
+}
+
+.you-tag.persona-tag {
+  color: var(--sea-deep);
+  border-color: rgba(31, 122, 108, 0.28);
+  max-width: 9.5rem;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: nowrap;
+}
+
+.you-tag.active-tag {
+  z-index: 8;
+  box-shadow: 0 6px 16px rgba(20, 90, 80, 0.22);
+  border-color: var(--sea);
 }
 
 .profiteur-zone {
@@ -254,30 +297,33 @@
 }
 
 .dot.you,
-.dot.jan-modaal {
+.dot.marked {
   z-index: 4;
   overflow: visible;
 }
 
-.dot.you svg {
+.dot.you svg,
+.marker-hit.active svg {
   max-width: 36px;
   height: auto;
   filter: drop-shadow(0 6px 10px rgba(20, 90, 80, 0.35));
 }
 
-.dot.jan-modaal:not(.you) svg {
-  max-width: 28px;
+.dot.marked:not(.you) .marker-hit:not(.active) svg {
+  max-width: 26px;
   height: auto;
-  filter: drop-shadow(0 4px 8px rgba(16, 36, 31, 0.2));
+  filter: drop-shadow(0 3px 6px rgba(16, 36, 31, 0.16));
 }
 
 .dot.you svg .head,
-.dot.you svg .body {
+.dot.you svg .body,
+.marker-hit.active svg .head,
+.marker-hit.active svg .body {
   fill: var(--sea-deep);
 }
 
-.dot.jan-modaal:not(.you) svg .head,
-.dot.jan-modaal:not(.you) svg .body {
+.dot.marked:not(.you) .marker-hit:not(.active) svg .head,
+.dot.marked:not(.you) .marker-hit:not(.active) svg .body {
   fill: #5c6b63;
 }
 
