@@ -132,13 +132,10 @@ export function calcLoonPremies(bruto) {
 
 export function calcZorgtoeslagJaar(inputs) {
   const inkomen = toetsingsinkomen(inputs)
-  const vermogen = Number(inputs.vermogen) || 0
   const partner = !!inputs.hasPartner
   const grens = partner ? ZORGTOESLAG.grensPartner : ZORGTOESLAG.grensAlleen
-  const vermGrens = partner
-    ? ZORGTOESLAG.vermogenPartner
-    : ZORGTOESLAG.vermogenAlleen
-  if (inkomen > grens || vermogen > vermGrens) return 0
+  // Vermogen laten we weg in de UI: model gaat uit van vermogen onder de grens.
+  if (inkomen > grens) return 0
 
   const maxM = partner
     ? ZORGTOESLAG.maxMaandPartner

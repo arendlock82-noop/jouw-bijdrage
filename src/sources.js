@@ -101,4 +101,4 @@ export const sources = [
 ]
 
 export const modelDisclaimer =
-  'Dit is een openbaar educatief model voor 2026. Het volgt gepubliceerde kengetallen, maar is geen Belastingdienst-/Toeslagen-engine: vermogen, aftrekposten, toeslagpartner-details en kinderopvangtoeslag zijn vereenvoudigd of weggelaten. Definitieve rechten stelt de overheid vast.'
+  'Dit is een openbaar educatief model voor 2026. Het volgt gepubliceerde kengetallen, maar is geen Belastingdienst-/Toeslagen-engine: we gaan uit van vermogen onder de toeslaggrenzen, en aftrekposten/kinderopvangtoeslag zijn vereenvoudigd of handmatig. Definitieve rechten stelt de overheid vast.'

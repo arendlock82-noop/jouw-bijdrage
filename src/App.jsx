@@ -12,6 +12,7 @@ import {
   revenueStreams,
   sources,
   spendStreams,
+  summarizeSituation,
 } from './data'
 import './App.css'
 
@@ -311,7 +312,24 @@ function TaxBar({
   )
 }
 
-function SituationForm({ inputs, onChange, customMode, derived }) {
+function PersonaSummary({ inputs }) {
+  const parts = summarizeSituation(inputs)
+  return (
+    <div className="persona-summary">
+      <p className="situation-hint">Deze berekening gaat uit van:</p>
+      <ul>
+        {parts.map((p) => (
+          <li key={p}>{p}</li>
+        ))}
+      </ul>
+      <p className="situation-hint soft">
+        Wil je andere aannames? Klik op <strong>Pas aan</strong>.
+      </p>
+    </div>
+  )
+}
+
+function SituationForm({ inputs, onChange, derived }) {
   const children = inputs.children || []
   const setChildAge = (index, age) => {
     const next = children.map((c, i) =>
@@ -333,51 +351,42 @@ function SituationForm({ inputs, onChange, customMode, derived }) {
   const d = derived
 
   return (
-    <div className={`calc-fields situation ${customMode ? 'editable' : 'readonly'}`}>
+    <div className="calc-fields situation editable">
       <p className="situation-hint">
-        Vul de situatie in — zorgtoeslag, huurtoeslag, kinderbijslag,
-        kindgebonden budget en box&nbsp;1 volgen automatisch (regels 2026).
+        Pas de situatie aan — toeslagen en box&nbsp;1 volgen automatisch (2026).
+        We rekenen zonder vermogensgrens (aanname: onder de toeslagdrempel).
       </p>
 
       <label>
         <span>Bruto inkomen / jaar</span>
-        {customMode ? (
-          <input
-            type="number"
-            step={100}
-            value={inputs.brutoJaar ?? 0}
-            onChange={(e) => onChange('brutoJaar', Number(e.target.value) || 0)}
-          />
-        ) : (
-          <strong>{euro(inputs.brutoJaar || 0)}</strong>
-        )}
+        <input
+          type="number"
+          step={100}
+          value={inputs.brutoJaar ?? 0}
+          onChange={(e) => onChange('brutoJaar', Number(e.target.value) || 0)}
+        />
       </label>
 
       <label className="check">
         <input
           type="checkbox"
           checked={!!inputs.hasPartner}
-          disabled={!customMode}
           onChange={(e) => onChange('hasPartner', e.target.checked)}
         />
-        <span>Toeslagpartner / samenwonend voor toeslagen</span>
+        <span>Toeslagpartner</span>
       </label>
 
       {inputs.hasPartner && (
         <label>
           <span>Bruto inkomen partner / jaar</span>
-          {customMode ? (
-            <input
-              type="number"
-              step={100}
-              value={inputs.partnerBrutoJaar ?? 0}
-              onChange={(e) =>
-                onChange('partnerBrutoJaar', Number(e.target.value) || 0)
-              }
-            />
-          ) : (
-            <strong>{euro(inputs.partnerBrutoJaar || 0)}</strong>
-          )}
+          <input
+            type="number"
+            step={100}
+            value={inputs.partnerBrutoJaar ?? 0}
+            onChange={(e) =>
+              onChange('partnerBrutoJaar', Number(e.target.value) || 0)
+            }
+          />
         </label>
       )}
 
@@ -387,7 +396,6 @@ function SituationForm({ inputs, onChange, customMode, derived }) {
           <button
             type="button"
             className={inputs.woningType === 'huur' ? 'active' : ''}
-            disabled={!customMode}
             onClick={() => onChange('woningType', 'huur')}
           >
             Huur
@@ -395,7 +403,6 @@ function SituationForm({ inputs, onChange, customMode, derived }) {
           <button
             type="button"
             className={inputs.woningType === 'koop' ? 'active' : ''}
-            disabled={!customMode}
             onClick={() => onChange('woningType', 'koop')}
           >
             Koop
@@ -404,69 +411,45 @@ function SituationForm({ inputs, onChange, customMode, derived }) {
         {inputs.woningType === 'huur' && (
           <label>
             <span>Rekenhuur / maand</span>
-            {customMode ? (
-              <input
-                type="number"
-                step={10}
-                value={inputs.huurMaand ?? 0}
-                onChange={(e) =>
-                  onChange('huurMaand', Number(e.target.value) || 0)
-                }
-              />
-            ) : (
-              <strong>{euro(inputs.huurMaand || 0)}</strong>
-            )}
+            <input
+              type="number"
+              step={10}
+              value={inputs.huurMaand ?? 0}
+              onChange={(e) =>
+                onChange('huurMaand', Number(e.target.value) || 0)
+              }
+            />
           </label>
         )}
       </fieldset>
 
-      <label>
-        <span>Vermogen (indicatie, 1 jan)</span>
-        {customMode ? (
-          <input
-            type="number"
-            step={500}
-            value={inputs.vermogen ?? 0}
-            onChange={(e) => onChange('vermogen', Number(e.target.value) || 0)}
-          />
-        ) : (
-          <strong>{euro(inputs.vermogen || 0)}</strong>
-        )}
-      </label>
-
       <fieldset className="kids-fieldset">
         <legend>Kinderen (&lt; 18)</legend>
         {children.length === 0 && (
-          <p className="empty-kids">Geen kinderen in dit huishouden.</p>
+          <p className="empty-kids">Geen kinderen.</p>
         )}
         {children.map((c, i) => (
           <div className="child-row" key={`child-${i}`}>
             <label>
               <span>Leeftijd kind {i + 1}</span>
-              {customMode ? (
-                <input
-                  type="number"
-                  min={0}
-                  max={17}
-                  value={c.age}
-                  onChange={(e) => setChildAge(i, Number(e.target.value) || 0)}
-                />
-              ) : (
-                <strong>{c.age} jaar</strong>
-              )}
+              <input
+                type="number"
+                min={0}
+                max={17}
+                value={c.age}
+                onChange={(e) => setChildAge(i, Number(e.target.value) || 0)}
+              />
             </label>
-            {customMode && (
-              <button
-                type="button"
-                className="linkish"
-                onClick={() => removeChild(i)}
-              >
-                Verwijder
-              </button>
-            )}
+            <button
+              type="button"
+              className="linkish"
+              onClick={() => removeChild(i)}
+            >
+              Verwijder
+            </button>
           </div>
         ))}
-        {customMode && children.length < 6 && (
+        {children.length < 6 && (
           <button type="button" className="add-child" onClick={addChild}>
             + Kind toevoegen
           </button>
@@ -474,21 +457,17 @@ function SituationForm({ inputs, onChange, customMode, derived }) {
         {children.length > 0 && (
           <label>
             <span>Kinderopvangtoeslag / jaar (handmatig)</span>
-            {customMode ? (
-              <input
-                type="number"
-                step={50}
-                value={inputs.kinderopvangJaarOverride ?? 0}
-                onChange={(e) =>
-                  onChange(
-                    'kinderopvangJaarOverride',
-                    Number(e.target.value) || 0,
-                  )
-                }
-              />
-            ) : (
-              <strong>{euro(inputs.kinderopvangJaarOverride || 0)}</strong>
-            )}
+            <input
+              type="number"
+              step={50}
+              value={inputs.kinderopvangJaarOverride ?? 0}
+              onChange={(e) =>
+                onChange(
+                  'kinderopvangJaarOverride',
+                  Number(e.target.value) || 0,
+                )
+              }
+            />
           </label>
         )}
       </fieldset>
@@ -497,7 +476,6 @@ function SituationForm({ inputs, onChange, customMode, derived }) {
         <input
           type="checkbox"
           checked={!!inputs.isStudent}
-          disabled={!customMode}
           onChange={(e) => onChange('isStudent', e.target.checked)}
         />
         <span>Student (hbo/wo)</span>
@@ -507,7 +485,6 @@ function SituationForm({ inputs, onChange, customMode, derived }) {
           <button
             type="button"
             className={inputs.studentWonen !== 'thuiswonend' ? 'active' : ''}
-            disabled={!customMode}
             onClick={() => onChange('studentWonen', 'uitwonend')}
           >
             Uitwonend
@@ -515,7 +492,6 @@ function SituationForm({ inputs, onChange, customMode, derived }) {
           <button
             type="button"
             className={inputs.studentWonen === 'thuiswonend' ? 'active' : ''}
-            disabled={!customMode}
             onClick={() => onChange('studentWonen', 'thuiswonend')}
           >
             Thuiswonend
@@ -527,42 +503,33 @@ function SituationForm({ inputs, onChange, customMode, derived }) {
         <input
           type="checkbox"
           checked={!!inputs.isOndernemer}
-          disabled={!customMode}
           onChange={(e) => onChange('isOndernemer', e.target.checked)}
         />
         <span>BV / DGA</span>
       </label>
-      {(inputs.isOndernemer || customMode) && (
+      {inputs.isOndernemer && (
         <>
           <label>
             <span>Winst BV / jaar</span>
-            {customMode ? (
-              <input
-                type="number"
-                step={100}
-                value={inputs.winstBv ?? 0}
-                onChange={(e) =>
-                  onChange('winstBv', Number(e.target.value) || 0)
-                }
-              />
-            ) : (
-              <strong>{euro(inputs.winstBv || 0)}</strong>
-            )}
+            <input
+              type="number"
+              step={100}
+              value={inputs.winstBv ?? 0}
+              onChange={(e) =>
+                onChange('winstBv', Number(e.target.value) || 0)
+              }
+            />
           </label>
           <label>
             <span>Dividend / jaar</span>
-            {customMode ? (
-              <input
-                type="number"
-                step={100}
-                value={inputs.dividend ?? 0}
-                onChange={(e) =>
-                  onChange('dividend', Number(e.target.value) || 0)
-                }
-              />
-            ) : (
-              <strong>{euro(inputs.dividend || 0)}</strong>
-            )}
+            <input
+              type="number"
+              step={100}
+              value={inputs.dividend ?? 0}
+              onChange={(e) =>
+                onChange('dividend', Number(e.target.value) || 0)
+              }
+            />
           </label>
         </>
       )}
@@ -640,12 +607,15 @@ function CalcPanel({
         </button>
       </div>
 
-      <SituationForm
-        inputs={inputs}
-        onChange={onChange}
-        customMode={customMode}
-        derived={calc.derived}
-      />
+      {customMode ? (
+        <SituationForm
+          inputs={inputs}
+          onChange={onChange}
+          derived={calc.derived}
+        />
+      ) : (
+        <PersonaSummary inputs={inputs} />
+      )}
 
       <div className="calc-result">
         <div>

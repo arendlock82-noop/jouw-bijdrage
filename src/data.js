@@ -160,7 +160,6 @@ function emptyPersonaInputs() {
     hasPartner: false,
     woningType: 'huur',
     huurMaand: 0,
-    vermogen: 5000,
     children: [],
     isStudent: false,
     studentWonen: 'uitwonend',
@@ -188,7 +187,6 @@ export const personas = [
       hasPartner: false,
       woningType: 'huur',
       huurMaand: 550,
-      vermogen: 2000,
       isStudent: true,
       studentWonen: 'uitwonend',
     },
@@ -205,7 +203,6 @@ export const personas = [
       hasPartner: false,
       woningType: 'huur',
       huurMaand: 780,
-      vermogen: 8000,
       children: [{ age: 6 }],
       kinderopvangJaarOverride: 4200,
     },
@@ -223,7 +220,6 @@ export const personas = [
       hasPartner: true,
       woningType: 'koop',
       huurMaand: 0,
-      vermogen: 25000,
       children: [{ age: 8 }, { age: 11 }],
     },
   },
@@ -238,7 +234,6 @@ export const personas = [
       brutoJaar: 52000,
       hasPartner: false,
       woningType: 'koop',
-      vermogen: 80000,
       isOndernemer: true,
       winstBv: 45000,
       dividend: 20000,
@@ -256,7 +251,6 @@ export const personas = [
       partnerBrutoJaar: 66000,
       hasPartner: true,
       woningType: 'koop',
-      vermogen: 120000,
       children: [{ age: 14 }],
       dividend: 2000,
     },
@@ -457,6 +451,57 @@ export function euro(n) {
     currency: 'EUR',
     maximumFractionDigits: 0,
   }).format(n)
+}
+
+/** Korte aannames-samenvatting voor persona-modus. */
+export function summarizeSituation(inputs) {
+  const parts = []
+  if (inputs.hasPartner) {
+    parts.push(
+      `twee verdieners (${euro(inputs.brutoJaar || 0)} + ${euro(inputs.partnerBrutoJaar || 0)} bruto/jaar)`,
+    )
+  } else {
+    parts.push(`${euro(inputs.brutoJaar || 0)} bruto/jaar`)
+  }
+
+  if (inputs.woningType === 'huur') {
+    parts.push(`huurwoning ${euro(inputs.huurMaand || 0)}/maand`)
+  } else {
+    parts.push('koopwoning')
+  }
+
+  const kids = inputs.children || []
+  if (kids.length === 1) {
+    parts.push(`1 kind (${kids[0].age} jaar)`)
+  } else if (kids.length > 1) {
+    parts.push(
+      `${kids.length} kinderen (${kids.map((c) => `${c.age}j`).join(', ')})`,
+    )
+  }
+
+  if (inputs.isStudent) {
+    parts.push(
+      inputs.studentWonen === 'thuiswonend'
+        ? 'thuiswonende student'
+        : 'uitwonende student',
+    )
+  }
+
+  if (inputs.isOndernemer) {
+    parts.push(
+      `BV (winst ${euro(inputs.winstBv || 0)}, dividend ${euro(inputs.dividend || 0)})`,
+    )
+  } else if ((Number(inputs.dividend) || 0) > 0) {
+    parts.push(`dividend ${euro(inputs.dividend)}`)
+  }
+
+  if ((Number(inputs.kinderopvangJaarOverride) || 0) > 0) {
+    parts.push(
+      `kinderopvangtoeslag ${euro(inputs.kinderopvangJaarOverride)} (handmatig)`,
+    )
+  }
+
+  return parts
 }
 
 export function mld(n) {
