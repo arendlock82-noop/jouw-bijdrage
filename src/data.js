@@ -180,7 +180,7 @@ export const ladderBenchmarks = [
   {
     id: 'modaal',
     shortLabel: 'Modaal',
-    tagLabel: 'Modaal (Jan Modaal)',
+    tagLabel: '(Jan)Modaal',
     tip: 'CPB-modaal inkomen 2026: €48.000 bruto/jaar (incl. vakantiegeld). Geen mediaan.',
     sourceId: 'cpb-modaal',
     inputs: {
@@ -192,7 +192,7 @@ export const ladderBenchmarks = [
   {
     id: 'mediaan',
     shortLabel: 'Mediaan',
-    tagLabel: 'Mediaan (Jan Mediaan)',
+    tagLabel: '(Jan)Mediaan',
     tip: 'CBS mediaan persoonlijk bruto-inkomen werkenden (2024): €46.200. Helft verdient minder, helft meer.',
     sourceId: 'cbs-mediaan',
     inputs: {

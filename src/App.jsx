@@ -95,7 +95,7 @@ function RankRow({ rank, personaId, graaier, label }) {
       <div
         className="rank-row"
         role="img"
-        aria-label={`Profiteur of graaier: ${label}, plek ${rank} van 100. Met Modaal (Jan Modaal) en Mediaan (Jan Mediaan).`}
+        aria-label={`Profiteur of graaier: ${label}, plek ${rank} van 100. Met (Jan)Modaal en (Jan)Mediaan.`}
       >
         <div
           className="profiteur-zone"
@@ -158,11 +158,10 @@ function RankRow({ rank, personaId, graaier, label }) {
         </span>
       </div>
       <p className="ladder-note">
-        <strong>Modaal (Jan Modaal)</strong> = CPB €48.000 ·{' '}
-        <strong>Mediaan (Jan Mediaan)</strong> = CBS €46.200 (werkenden,
-        2024). Beide door dezelfde rekenmachine — plek volgt uit wat ze
-        betalen. Speelse labels: vanaf <strong>€1</strong> ben je hier een
-        graaier.
+        <strong>(Jan)Modaal</strong> = CPB €48.000 ·{' '}
+        <strong>(Jan)Mediaan</strong> = CBS €46.200 (werkenden, 2024). Beide
+        door dezelfde rekenmachine — plek volgt uit wat ze betalen. Speelse
+        labels: vanaf <strong>€1</strong> ben je hier een graaier.
       </p>
     </div>
   )
