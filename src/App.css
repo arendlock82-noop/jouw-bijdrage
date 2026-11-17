@@ -553,8 +553,28 @@
   color: var(--pay);
 }
 
-.tax-bar.out .tax-bar-head strong {
-  color: var(--sea-deep);
+.tax-bar.out .tax-bar-head strong,
+.tax-bar.get .tax-bar-head strong {
+  color: var(--receive);
+}
+
+.contribution-panel {
+  margin-top: 0.35rem;
+  padding: 0.75rem 0.8rem 0.85rem;
+  border-radius: 16px;
+  border: 1px solid rgba(31, 122, 108, 0.18);
+  background: linear-gradient(
+    165deg,
+    rgba(255, 255, 255, 0.55),
+    rgba(31, 122, 108, 0.08)
+  );
+}
+
+.tax-bar-empty-note {
+  margin: 0.45rem 0 0;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: var(--ink-soft);
 }
 
 .tax-bar {
@@ -657,9 +677,19 @@
 
 .benefits-compare {
   margin: 0.65rem 0 0;
-  font-size: 0.74rem;
+  font-size: 0.8rem;
+  font-weight: 600;
   color: var(--ink-soft);
   line-height: 1.4;
+  text-align: center;
+}
+
+.benefits-compare.plus {
+  color: var(--sea-deep);
+}
+
+.benefits-compare.minus {
+  color: var(--pay);
 }
 
 .tax-bar-empty {

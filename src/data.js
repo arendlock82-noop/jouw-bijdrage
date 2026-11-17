@@ -98,7 +98,7 @@ export const spendStreams = [
     color: '#1F7A6C',
     hint: 'Zorguitgaven (Zvw, Wlz e.d.)',
     detail:
-      'MN 2026: circa €115 mld. Jouw deel = jouw totale belasting × (115 ÷ 462).',
+      'MN 2026: ±€115 mld. “Jouw bijdrage” hier = jouw belasting × (115÷462) — wat je meebetaalt aan de zorgpot, niet wat je aan zorg “krijgt”.',
   },
   {
     id: 'sociale',
@@ -107,7 +107,7 @@ export const spendStreams = [
     color: '#2F6B9A',
     hint: 'AOW, WW, bijstand, toeslagen, kinderopvang',
     detail:
-      'MN 2026: circa €116 mld. Inclusief AOW en toeslagen.',
+      'MN 2026: ±€116 mld. Chip = meebetalen naar rato; wat jij ontvangt staat onder “Jij profiteert”.',
   },
   {
     id: 'ocw',
@@ -115,7 +115,8 @@ export const spendStreams = [
     mld: 55,
     color: '#C47A2C',
     hint: 'Onderwijs, cultuur en wetenschap',
-    detail: 'MN 2026: circa €55 mld voor OCW.',
+    detail:
+      'MN 2026: ±€55 mld. Chip = meebetalen naar rato; student/kind-voordelen staan in het midden.',
   },
   {
     id: 'bzk_gemeenten',
@@ -123,7 +124,7 @@ export const spendStreams = [
     mld: 51,
     color: '#4A7C59',
     hint: 'Gemeente- en Provinciefonds',
-    detail: 'MN 2026: circa €51 mld via Gemeente- en Provinciefonds.',
+    detail: 'MN 2026: ±€51 mld. Chip = jouw belasting naar rato van dit potje.',
   },
   {
     id: 'defensie',
@@ -131,7 +132,7 @@ export const spendStreams = [
     mld: 24,
     color: '#5C4A3A',
     hint: 'Incl. Defensiematerieelbegrotingsfonds',
-    detail: 'MN 2026: circa €24 mld (incl. DMF).',
+    detail: 'MN 2026: ±€24 mld (incl. DMF). Chip = meebetalen naar rato.',
   },
   {
     id: 'overig_uit',
@@ -140,7 +141,7 @@ export const spendStreams = [
     color: '#6B7280',
     hint: 'JenV, IenW, BZ, klimaat, asiel, financiën, …',
     detail:
-      'Rest tot €462 mld: o.a. Justitie & Veiligheid, Infrastructuur, Buitenlandse Zaken, klimaat, asiel.',
+      'Rest tot €462 mld. Chip = meebetalen naar rato — geen persoonlijk “ontvangstbedrag”.',
   },
 ]
 
@@ -413,31 +414,19 @@ export function computeFromInputs(inputs) {
       label: `Basisschool / VO (publiek, ${schoolKids} kind${schoolKids > 1 ? 'eren' : ''})`,
       amount: poVo * schoolKids,
       color: '#C47A2C',
-      tip: `Indicatie ±€${poVo.toLocaleString('nl-NL')} publieke bekostiging per kind/jaar.`,
+      tip: `Indicatie ±€${poVo.toLocaleString('nl-NL')} publieke bekostiging per kind/jaar — alleen als er schoolgaande kinderen in jouw situatie staan.`,
       auto: true,
     })
   }
 
-  const bruto = toetsingsinkomen(inputs)
-  const zorgImputed = Math.round(
-    2200 + Math.min(bruto, 60000) * 0.008 - (bruto > 100000 ? 400 : 0),
-  )
-  if (zorgImputed > 0) {
-    benefits.push({
-      id: 'zorg_imputed',
-      label: 'Zorg via collectieve middelen',
-      amount: zorgImputed,
-      color: '#1F7A6C',
-      tip: 'Indicatie collectief gefinancierde zorg — niet je zorgtoeslag.',
-      auto: true,
-    })
-  }
+  // Geen standaard “zorgpakket”: zorgtoeslag zit hierboven; zorgconsumptie
+  // hangt af van gebruik en is geen vast bedrag per persoon.
 
   const receivedTotal = benefits.reduce((a, b) => a + b.amount, 0)
 
   const received = {
     zorg: benefits
-      .filter((b) => b.id === 'zorgtoeslag' || b.id === 'zorg_imputed')
+      .filter((b) => b.id === 'zorgtoeslag')
       .reduce((a, b) => a + b.amount, 0),
     sociale: benefits
       .filter((b) =>

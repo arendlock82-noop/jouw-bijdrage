@@ -134,7 +134,14 @@ function InfoTip({ text }) {
  * Compacte landelijke staaf (gelijke kaders) + losse legenda —
  * voorkomt overlappende tekst bij kleine segmenten.
  */
-function AlignedStack({ streams, total, side, youMap, maxTotal }) {
+function AlignedStack({
+  streams,
+  total,
+  side,
+  youMap,
+  maxTotal,
+  youLabel = 'Jouw bijdrage',
+}) {
   const empty = Math.max(0, maxTotal - total)
 
   return (
@@ -168,7 +175,9 @@ function AlignedStack({ streams, total, side, youMap, maxTotal }) {
                   {mld(s.mld)} · {pct.toFixed(0)}%
                 </span>
                 {you > 0 && (
-                  <b className="you-chip">Jouw bijdrage {euro(you)}</b>
+                  <b className="you-chip">
+                    {youLabel} {euro(you)}
+                  </b>
                 )}
               </div>
             </li>
@@ -180,12 +189,12 @@ function AlignedStack({ streams, total, side, youMap, maxTotal }) {
 }
 
 /**
- * Links: hoe jij bijdraagt aan de inkomsten (soorten belasting).
- * Rechts: waar jouw betaalde belasting naartoe gaat (MN-verhouding) —
- * dus “ik betaal ±X aan zorg”, niet “ik ontvang X zorg”.
+ * Jouw bijdrage: links wat je afdraagt, rechts wat jij — in deze
+ * persona/situatie — concreet terugkrijgt (geen begrotingsverdeling).
  */
-function PersonalTaxBars({ paid, paidTotal, allocated, allocatedTotal }) {
-  const max = Math.max(paidTotal, allocatedTotal, 1)
+function ContributionPanel({ paid, paidTotal, benefits, receivedTotal }) {
+  const max = Math.max(paidTotal, receivedTotal, 1)
+  const net = receivedTotal - paidTotal
 
   const paySegs = revenueStreams
     .map((s) => ({
@@ -197,117 +206,62 @@ function PersonalTaxBars({ paid, paidTotal, allocated, allocatedTotal }) {
     }))
     .filter((s) => s.amount > 0)
 
-  const outSegs = spendStreams.map((s) => {
-    const amount = allocated[s.id] ?? 0
-    const pct = ((s.mld / officialExpenditureTotalMld) * 100).toFixed(0)
-    return {
-      ...s,
-      amount,
-      tip:
-        s.detail ||
-        `${s.hint}. Van jouw ${euro(paidTotal)} gaat ±${pct}% (= ${euro(amount)}) naar dit potje.`,
-    }
-  })
+  const profitSegs = benefits.map((b) => ({
+    id: b.id,
+    label: b.label,
+    color: b.color,
+    amount: b.amount,
+    tip: b.tip,
+    auto: b.auto,
+  }))
 
   return (
-    <div className="tax-bars">
-      <p className="tax-bars-title">Jouw meebetalen</p>
+    <div className="tax-bars contribution-panel">
+      <p className="tax-bars-title">Jouw bijdrage</p>
       <p className="tax-bars-sub">
-        Links wat je afdraagt. Rechts waar dat — naar rato van de begroting —
-        naartoe gaat.
+        Links wat jij afdraagt. Rechts wat jij in <em>jouw</em> situatie
+        terugkrijgt — toeslagen en voorzieningen die bij deze gegevens horen,
+        geen standaard “zorgpakket”.
       </p>
       <div className="tax-bars-row">
         <TaxBar
           side="pay"
-          title="Jij betaalt"
+          title="Jij draagt bij"
           total={paidTotal}
           max={max}
           segments={paySegs}
           compact
         />
         <TaxBar
-          side="out"
-          title="Daarvan naar potjes"
-          total={allocatedTotal}
+          side="get"
+          title="Jij profiteert"
+          total={receivedTotal}
           max={max}
-          segments={outSegs}
+          segments={profitSegs}
           compact
+          emptyLabel="Nog geen berekende voordelen voor deze situatie"
+          showAutoTags
         />
       </div>
-    </div>
-  )
-}
-
-/** Wat je terugkrijgt: toeslagen + publieke voorzieningen (o.a. onderwijs). */
-function BenefitsPanel({ benefits, receivedTotal, paidTotal }) {
-  const max = Math.max(receivedTotal, paidTotal, 1)
-  const empty = Math.max(0, max - receivedTotal)
-
-  return (
-    <div className="benefits-panel">
-      <div className="benefits-head">
-        <div>
-          <p className="tax-bars-title">Wat krijg je terug?</p>
-          <p className="tax-bars-sub">
-            Toeslagen én de waarde van “gratis” voorzieningen (zoals onderwijs)
-            — dat is profiteren van de collectieve pot.
-          </p>
-        </div>
-        <strong className="benefits-total">{euro(receivedTotal)}</strong>
-      </div>
-
-      <div className="benefits-visual">
-        <div className="benefits-track">
-          <div
-            className="tax-bar-empty"
-            style={{ flexGrow: empty || 0.0001 }}
-          />
-          <div
-            className="benefits-fill"
-            style={{ flexGrow: Math.max(receivedTotal, 1) }}
-          >
-            {benefits.map((b) => (
-              <div
-                key={b.id}
-                className="tax-bar-seg"
-                style={{
-                  flexGrow: Math.max(b.amount, 0.01),
-                  background: b.color,
-                }}
-                title={`${b.label}: ${euro(b.amount)}`}
-              />
-            ))}
-          </div>
-        </div>
-        <ul className="benefits-list">
-          {benefits.map((b) => (
-            <li key={b.id}>
-              <i style={{ background: b.color }} />
-              <span className="leg-label">
-                {b.label}
-                {b.auto === false ? (
-                  <em className="auto-tag hand">handmatig</em>
-                ) : (
-                  <em className="auto-tag">auto</em>
-                )}
-                <InfoTip text={b.tip} />
-              </span>
-              <b>{euro(b.amount)}</b>
-            </li>
-          ))}
-        </ul>
-      </div>
-      <p className="benefits-compare">
-        Teruggekregen {euro(receivedTotal)} vs. betaald {euro(paidTotal)}
-        {receivedTotal >= paidTotal
-          ? ' — je krijgt meer terug dan je inlegt.'
-          : ' — je legt meer in dan je persoonlijk terugziet.'}
+      <p className={`benefits-compare ${net >= 0 ? 'plus' : 'minus'}`}>
+        {net >= 0
+          ? `Je profiteert ${euro(Math.abs(net))} meer dan je bijdraagt.`
+          : `Je draagt ${euro(Math.abs(net))} meer bij dan je persoonlijk terugziet.`}
       </p>
     </div>
   )
 }
 
-function TaxBar({ side, title, total, max, segments, compact }) {
+function TaxBar({
+  side,
+  title,
+  total,
+  max,
+  segments,
+  compact,
+  emptyLabel,
+  showAutoTags,
+}) {
   const empty = Math.max(0, max - total)
 
   return (
@@ -329,20 +283,30 @@ function TaxBar({ side, title, total, max, segments, compact }) {
           ))}
         </div>
       </div>
-      <ul className="tax-bar-legend">
-        {segments.map((s) => (
-          <li key={s.id}>
-            <i style={{ background: s.color }} />
-            <span>
-              <span className="leg-label">
-                {s.label.replace(/^[^·]+·\s*/, '')}
-                <InfoTip text={s.tip} />
+      {segments.length === 0 && emptyLabel ? (
+        <p className="tax-bar-empty-note">{emptyLabel}</p>
+      ) : (
+        <ul className="tax-bar-legend">
+          {segments.map((s) => (
+            <li key={s.id}>
+              <i style={{ background: s.color }} />
+              <span>
+                <span className="leg-label">
+                  {s.label.replace(/^[^·]+·\s*/, '')}
+                  {showAutoTags &&
+                    (s.auto === false ? (
+                      <em className="auto-tag hand">handmatig</em>
+                    ) : (
+                      <em className="auto-tag">auto</em>
+                    ))}
+                  <InfoTip text={s.tip} />
+                </span>
+                <b>{euro(s.amount)}</b>
               </span>
-              <b>{euro(s.amount)}</b>
-            </span>
-          </li>
-        ))}
-      </ul>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 }
@@ -652,8 +616,6 @@ function CalcPanel({
   onToggleCustom,
 }) {
   const net = calc.receivedTotal - calc.paidTotal
-  const allocated = allocatePaidToSpend(calc.paidTotal)
-  const allocatedTotal = Object.values(allocated).reduce((a, b) => a + b, 0)
 
   return (
     <div className="calc-panel">
@@ -687,11 +649,11 @@ function CalcPanel({
 
       <div className="calc-result">
         <div>
-          <span>Belasting &amp; premies betaald</span>
+          <span>Jij draagt bij</span>
           <strong className="pay">{euro(calc.paidTotal)}</strong>
         </div>
         <div>
-          <span>Toeslagen e.d. terug</span>
+          <span>Jij profiteert</span>
           <strong className="get">{euro(calc.receivedTotal)}</strong>
         </div>
         <div className={`net ${net >= 0 ? 'plus' : 'minus'}`}>
@@ -703,17 +665,11 @@ function CalcPanel({
         </div>
       </div>
 
-      <BenefitsPanel
-        benefits={calc.benefits}
-        receivedTotal={calc.receivedTotal}
-        paidTotal={calc.paidTotal}
-      />
-
-      <PersonalTaxBars
+      <ContributionPanel
         paid={calc.paid}
         paidTotal={calc.paidTotal}
-        allocated={allocated}
-        allocatedTotal={allocatedTotal}
+        benefits={calc.benefits}
+        receivedTotal={calc.receivedTotal}
       />
     </div>
   )
@@ -844,6 +800,7 @@ export default function App() {
             total={officialRevenueTotalMld}
             maxTotal={NATIONAL_MAX_MLD}
             youMap={calc.paid}
+            youLabel="Jouw bijdrage"
           />
         </div>
 
@@ -864,7 +821,9 @@ export default function App() {
           <header className="col-head out">
             <p>Uitgaven Nederland</p>
             <h2>{mld(officialExpenditureTotalMld)}</h2>
-            <span>Zelfde kader — iets voller dan de inkomstenstaaf</span>
+            <span>
+              Landelijke potjes — “jouw bijdrage” = jouw belasting naar rato
+            </span>
           </header>
           <AlignedStack
             side="out"
@@ -872,6 +831,7 @@ export default function App() {
             total={officialExpenditureTotalMld}
             maxTotal={NATIONAL_MAX_MLD}
             youMap={allocated}
+            youLabel="Jouw bijdrage"
           />
         </div>
       </section>
