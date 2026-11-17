@@ -1,0 +1,49 @@
+:root {
+  --ink: #10241f;
+  --ink-soft: #2a4038;
+  --paper: #eef3f0;
+  --paper-2: #e3ece7;
+  --mint: #d7ebe2;
+  --sea: #1f7a6c;
+  --sea-deep: #145a50;
+  --sand: #dde8e2;
+  --amber: #b86b24;
+  --receive: #1f7a6c;
+  --pay: #a34a32;
+  --line: rgba(16, 36, 31, 0.12);
+  --shadow: 0 18px 50px rgba(16, 36, 31, 0.08);
+  --radius: 18px;
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-body: 'Sora', system-ui, sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--font-body);
+  color: var(--ink);
+  background:
+    radial-gradient(1200px 600px at 10% -10%, #d5ebe3 0%, transparent 55%),
+    radial-gradient(900px 500px at 100% 0%, #d9e4ef 0%, transparent 45%),
+    linear-gradient(180deg, var(--paper) 0%, #e4ebe7 100%);
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+}
+
+a {
+  color: inherit;
+}
