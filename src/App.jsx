@@ -17,24 +17,27 @@ import {
 import './App.css'
 
 const CROWD_SIZE = 48
-/** Speelse aanname voor de ladder: ~10% netto belastingprofiteur. */
-const PROFITEUR_SHARE = 0.1
+/** Speelse regel: ≥ €1 belasting betaald = graaier. */
+const GRAAIER_FROM_EURO = 1
+/** Tiny zone links: wie (bijna) niets betaalt. */
+const PROFITEUR_SHARE = 0.04
 const NATIONAL_MAX_MLD = Math.max(
   officialRevenueTotalMld,
   officialExpenditureTotalMld,
 )
 
-/** Plek 1–100 op de Profiteursladder o.b.v. belasting netto (niet salaris). */
-function taxLadderRank(paidTotal, receivedTotal) {
-  const net = receivedTotal - paidTotal
-  if (net >= 0) {
-    const intensity =
-      receivedTotal > 0 ? Math.min(1, net / receivedTotal) : 1
-    // Sterkere profiteur → dichter bij 1
-    return Math.max(1, Math.min(10, Math.round(10 - intensity * 9)))
-  }
-  const burden = paidTotal / (paidTotal + Math.max(receivedTotal, 1))
-  return Math.max(11, Math.min(100, Math.round(11 + burden * 88)))
+/** Ladder: weinig/geen belasting links, grotere betalers rechts = grotere “graaiers”. */
+function taxLadderRank(paidTotal) {
+  if (paidTotal < GRAAIER_FROM_EURO) return 1
+  // €1 → plek ~5, €60k → ~100
+  return Math.min(
+    100,
+    Math.max(5, Math.round(5 + (paidTotal / 60000) * 95)),
+  )
+}
+
+function isGraaier(paidTotal) {
+  return paidTotal >= GRAAIER_FROM_EURO
 }
 
 /** Duidelijk poppetje: hoofd + schouders/lijf. */
@@ -54,30 +57,31 @@ function PersonGlyph({ you }) {
   )
 }
 
-function RankRow({ rank, personaId, isProfiteur, label }) {
+function RankRow({ rank, personaId, graaier, label }) {
   const youSlot = Math.round(((rank - 1) / 99) * (CROWD_SIZE - 1))
   const zoneSlots = Math.max(1, Math.round(CROWD_SIZE * PROFITEUR_SHARE))
   const zonePct = PROFITEUR_SHARE * 100
   const medianPct = 50
+  const role = graaier ? 'graaier' : 'profiteur'
 
   return (
     <div className="rank-row-wrap">
       <div className="rank-ends">
-        <span>Belastingprofiteur</span>
-        <span>Belastingbetaler</span>
+        <span>Profiteur</span>
+        <span>Graaier</span>
       </div>
       <div
         className="rank-row"
         role="img"
-        aria-label={`Profiteursladder: ${label}, plek ${rank} van 100`}
+        aria-label={`Profiteur of graaier: ${label}, plek ${rank} van 100`}
       >
         <div
           className="profiteur-zone"
           style={{ width: `${zonePct}%` }}
-          title="Ongeveer 10% ontvangt meer belastinggeld dan ze betalen"
+          title="Wie (bijna) geen belasting betaalt"
         />
         <div className="zone-line" style={{ left: `${zonePct}%` }}>
-          <span>±10%</span>
+          <span>≥ €1</span>
         </div>
         <div className="median-line" style={{ left: `${medianPct}%` }}>
           <span>Mediaan</span>
@@ -102,14 +106,13 @@ function RankRow({ rank, personaId, isProfiteur, label }) {
         style={{ left: `${(youSlot / (CROWD_SIZE - 1)) * 100}%` }}
       >
         <span>
-          {label} · plek {rank}/100
-          {isProfiteur ? ' · netto profiteur' : ' · netto betaler'}
+          {label} · {role} · plek {rank}/100
         </span>
       </div>
       <p className="ladder-note">
-        Speels kader: ongeveer de eerste 10% is <strong>netto belastingprofiteur</strong>
-        ; daarna vooral <strong>belastingbetalers</strong>. De streep bij 50% is
-        de mediaan.
+        Speelse regel: betaal je <strong>minstens €1</strong> belasting, dan ben
+        je al een <strong>graaier</strong>. Alleen wie (vrijwel) niets afdraagt
+        blijft <strong>profiteur</strong>.
       </p>
     </div>
   )
@@ -474,8 +477,8 @@ export default function App() {
 
   const calc = useMemo(() => computeFromInputs(inputs), [inputs])
 
-  const rank = taxLadderRank(calc.paidTotal, calc.receivedTotal)
-  const isProfiteur = calc.receivedTotal >= calc.paidTotal
+  const rank = taxLadderRank(calc.paidTotal)
+  const graaier = isGraaier(calc.paidTotal)
   const allocated = useMemo(
     () => allocatePaidToSpend(calc.paidTotal),
     [calc.paidTotal],
@@ -490,11 +493,11 @@ export default function App() {
     <div className="shell">
       <header className="top">
         <h1 className="logo">
-          Jouw <span>Bijdrage</span>
+          Profiteur <span>of graaier?</span>
         </h1>
         <p className="lede">
-          De Profiteursladder laat zien waar je staat. Daarna: landelijke
-          belastingstromen — en jouw stukje daarin.
+          Betaal je €1 belasting, dan ben je al een graaier. Ontdek waar jij
+          staat — en wat je bijdraagt én terugkrijgt.
         </p>
       </header>
 
@@ -522,14 +525,19 @@ export default function App() {
 
       <section className="spectrum">
         <div className="spectrum-copy">
-          <p className="kicker">Profiteursladder</p>
-          <h2>{title}</h2>
+          <p className="kicker">De ladder</p>
+          <h2>
+            {title}
+            <span className={`role-pill ${graaier ? 'graaier' : 'profiteur'}`}>
+              {graaier ? 'Graaier' : 'Profiteur'}
+            </span>
+          </h2>
           <p>{tagline}</p>
         </div>
         <RankRow
           rank={rank}
           personaId={customMode ? 'custom' : personaId}
-          isProfiteur={isProfiteur}
+          graaier={graaier}
           label={title}
         />
       </section>
