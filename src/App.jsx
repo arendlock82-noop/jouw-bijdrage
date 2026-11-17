@@ -493,7 +493,7 @@ export default function App() {
     <div className="shell">
       <header className="top">
         <h1 className="logo">
-          Profiteur <span>of graaier?</span>
+          Profiteur <span>of graaien?</span>
         </h1>
         <p className="lede">
           Betaal je €1 belasting, dan ben je al een graaier. Ontdek waar jij
