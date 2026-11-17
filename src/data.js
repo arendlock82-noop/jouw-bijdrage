@@ -172,6 +172,38 @@ function emptyPersonaInputs() {
 }
 
 /**
+ * Referentie-Jannen voor de ladder.
+ * Zelfde huishoudvorm (alleenverdiener, koop, geen kids) zodat alleen
+ * het inkomen hun plek bepaalt — via dezelfde rekenregels als personas.
+ */
+export const ladderBenchmarks = [
+  {
+    id: 'modaal',
+    shortLabel: 'Modaal',
+    tagLabel: 'Modaal (Jan Modaal)',
+    tip: 'CPB-modaal inkomen 2026: €48.000 bruto/jaar (incl. vakantiegeld). Geen mediaan.',
+    sourceId: 'cpb-modaal',
+    inputs: {
+      ...emptyPersonaInputs(),
+      brutoJaar: 48000,
+      woningType: 'koop',
+    },
+  },
+  {
+    id: 'mediaan',
+    shortLabel: 'Mediaan',
+    tagLabel: 'Mediaan (Jan Mediaan)',
+    tip: 'CBS mediaan persoonlijk bruto-inkomen werkenden (2024): €46.200. Helft verdient minder, helft meer.',
+    sourceId: 'cbs-mediaan',
+    inputs: {
+      ...emptyPersonaInputs(),
+      brutoJaar: 46200,
+      woningType: 'koop',
+    },
+  },
+]
+
+/**
  * Persona-inputs: huishoudsituatie. Toeslagen/belasting volgen automatisch.
  */
 export const personas = [

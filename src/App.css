@@ -302,6 +302,20 @@
 .you-tag.jan-tag {
   color: #3d4a44;
   border-color: rgba(16, 36, 31, 0.22);
+  font-size: 0.62rem;
+  padding: 0.14rem 0.45rem;
+}
+
+.you-tag.jan-tag.modaal {
+  color: #5c4a3a;
+  border-color: rgba(164, 122, 44, 0.35);
+  background: rgba(255, 248, 235, 0.96);
+}
+
+.you-tag.jan-tag.mediaan {
+  color: #2f4a6b;
+  border-color: rgba(47, 107, 154, 0.35);
+  background: rgba(235, 244, 255, 0.96);
 }
 
 .you-tag.jan-tag.stacked {

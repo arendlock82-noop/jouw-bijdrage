@@ -8,6 +8,22 @@ export const sources = [
     usedFor: 'Landelijke totalen inkomsten (€451,4 mld) en uitgaven (€462 mld) en verdeling potjes.',
   },
   {
+    id: 'cpb-modaal',
+    title: 'Modaal inkomen 2026 (€48.000 bruto)',
+    publisher: 'Centraal Planbureau (MEV / raming)',
+    url: 'https://www.cpb.nl/',
+    usedFor:
+      'Jan Modaal op de ladder: CPB-referentie-inkomen (niet de mediaan).',
+  },
+  {
+    id: 'cbs-mediaan',
+    title: 'Mediaan inkomen werkenden 2024 (€46.200 bruto)',
+    publisher: 'CBS',
+    url: 'https://www.cbs.nl/nl-nl/cijfers/detail/84494NED',
+    usedFor:
+      'Jan Mediaan op de ladder: middelste persoonlijke bruto-inkomen van werkenden (CBS; nog geen 2026-cijfer).',
+  },
+  {
     id: 'box1',
     title: 'Box 1-tarieven 2026',
     publisher: 'Belastingdienst',

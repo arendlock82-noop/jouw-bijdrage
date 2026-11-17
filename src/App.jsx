@@ -8,6 +8,7 @@ import {
   modelDisclaimer,
   officialExpenditureTotalMld,
   officialRevenueTotalMld,
+  ladderBenchmarks,
   personas,
   revenueStreams,
   sources,
@@ -57,12 +58,33 @@ function PersonGlyph({ you }) {
   )
 }
 
+function rankToSlot(rank) {
+  return Math.round(((rank - 1) / 99) * (CROWD_SIZE - 1))
+}
+
+/** Benchmarks: zelfde engine als personas → plek o.b.v. echte betaalde belasting. */
+const JAN_MARKERS = ladderBenchmarks.map((b) => {
+  const calc = computeFromInputs(b.inputs)
+  const rank = taxLadderRank(calc.paidTotal)
+  return {
+    ...b,
+    paidTotal: calc.paidTotal,
+    rank,
+    slot: rankToSlot(rank),
+  }
+})
+
 function RankRow({ rank, personaId, graaier, label }) {
-  const youSlot = Math.round(((rank - 1) / 99) * (CROWD_SIZE - 1))
-  const janModaalSlot = Math.round((CROWD_SIZE - 1) / 2)
+  const youSlot = rankToSlot(rank)
   const zoneSlots = Math.max(1, Math.round(CROWD_SIZE * PROFITEUR_SHARE))
   const zonePct = PROFITEUR_SHARE * 100
   const role = graaier ? 'graaier' : 'profiteur'
+  const markersBySlot = new Map()
+  for (const m of JAN_MARKERS) {
+    const list = markersBySlot.get(m.slot) || []
+    list.push(m)
+    markersBySlot.set(m.slot, list)
+  }
 
   return (
     <div className="rank-row-wrap">
@@ -73,7 +95,7 @@ function RankRow({ rank, personaId, graaier, label }) {
       <div
         className="rank-row"
         role="img"
-        aria-label={`Profiteur of graaier: ${label}, plek ${rank} van 100. Jan Modaal in het midden.`}
+        aria-label={`Profiteur of graaier: ${label}, plek ${rank} van 100. Met Modaal (Jan Modaal) en Mediaan (Jan Mediaan).`}
       >
         <div
           className="profiteur-zone"
@@ -85,22 +107,44 @@ function RankRow({ rank, personaId, graaier, label }) {
         </div>
         {Array.from({ length: CROWD_SIZE }, (_, i) => {
           const you = i === youSlot
-          const janModaal = i === janModaalSlot
+          const jans = markersBySlot.get(i) || []
+          const hasJan = jans.length > 0
           const inZone = i < zoneSlots
           return (
             <div
               key={`${personaId}-${i}`}
-              className={`dot ${you ? 'you' : ''} ${janModaal ? 'jan-modaal' : ''} ${inZone ? 'profiteur' : 'betaler'} ${i < youSlot ? 'before' : ''}`}
+              className={`dot ${you ? 'you' : ''} ${hasJan ? 'jan-modaal' : ''} ${inZone ? 'profiteur' : 'betaler'} ${i < youSlot ? 'before' : ''}`}
               style={{ animationDelay: `${i * 12}ms` }}
+              title={
+                hasJan
+                  ? jans
+                      .map(
+                        (j) =>
+                          `${j.tagLabel}: ${euro(j.inputs.brutoJaar)} bruto → ${euro(j.paidTotal)} belasting (plek ${j.rank})`,
+                      )
+                      .join(' · ')
+                  : undefined
+              }
             >
               {you && <em className="you-tag">{label}</em>}
-              {janModaal && !you && (
-                <em className="you-tag jan-tag">Jan Modaal</em>
-              )}
-              {janModaal && you && (
-                <em className="you-tag jan-tag stacked">Jan Modaal</em>
-              )}
-              <PersonGlyph you={you || janModaal} />
+              {jans.map((j, ji) => (
+                <em
+                  key={j.id}
+                  className={`you-tag jan-tag ${j.id === 'mediaan' ? 'mediaan' : 'modaal'}${you || ji > 0 ? ' stacked' : ''}${you && ji > 0 ? ' stacked-2' : ''}`}
+                  style={
+                    you || ji > 0
+                      ? {
+                          top: you
+                            ? `${-1.15 - (ji + 1) * 1.2}rem`
+                            : `${-1.15 - ji * 1.2}rem`,
+                        }
+                      : undefined
+                  }
+                >
+                  {j.tagLabel}
+                </em>
+              ))}
+              <PersonGlyph you={you || hasJan} />
             </div>
           )
         })}
@@ -114,9 +158,11 @@ function RankRow({ rank, personaId, graaier, label }) {
         </span>
       </div>
       <p className="ladder-note">
-        Speelse ladder (niet officieel): vanaf <strong>€1</strong> belasting
-        noemen we je hier een <strong>graaier</strong>. Wie (vrijwel) niets
-        afdraagt blijft een <strong>profiteur</strong> — met een knipoog.
+        <strong>Modaal (Jan Modaal)</strong> = CPB €48.000 ·{' '}
+        <strong>Mediaan (Jan Mediaan)</strong> = CBS €46.200 (werkenden,
+        2024). Beide door dezelfde rekenmachine — plek volgt uit wat ze
+        betalen. Speelse labels: vanaf <strong>€1</strong> ben je hier een
+        graaier.
       </p>
     </div>
   )
@@ -245,7 +291,6 @@ function ContributionPanel({ paid, paidTotal, benefits, receivedTotal }) {
           segments={profitSegs}
           compact
           emptyLabel="Nog geen berekende voordelen voor deze situatie"
-          showAutoTags
         />
       </div>
       <p className={`benefits-compare ${net >= 0 ? 'plus' : 'minus'}`}>
@@ -265,7 +310,6 @@ function TaxBar({
   segments,
   compact,
   emptyLabel,
-  showAutoTags,
 }) {
   const empty = Math.max(0, max - total)
 
@@ -298,12 +342,9 @@ function TaxBar({
               <span>
                 <span className="leg-label">
                   {s.label.replace(/^[^·]+·\s*/, '')}
-                  {showAutoTags &&
-                    (s.auto === false ? (
-                      <em className="auto-tag hand">handmatig</em>
-                    ) : (
-                      <em className="auto-tag">auto</em>
-                    ))}
+                  {s.auto === false && (
+                    <em className="auto-tag hand">handmatig</em>
+                  )}
                   <InfoTip text={s.tip} />
                 </span>
                 <b>{euro(s.amount)}</b>
