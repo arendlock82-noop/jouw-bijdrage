@@ -109,9 +109,9 @@ function RankRow({ rank, personaId, graaier, label }) {
         </span>
       </div>
       <p className="ladder-note">
-        Speelse regel: betaal je <strong>minstens €1</strong> belasting, dan ben
-        je al een <strong>graaier</strong>. Alleen wie (vrijwel) niets afdraagt
-        blijft <strong>profiteur</strong>.
+        Speelse ladder (niet officieel): vanaf <strong>€1</strong> belasting
+        noemen we je hier een <strong>graaier</strong>. Wie (vrijwel) niets
+        afdraagt blijft een <strong>profiteur</strong> — met een knipoog.
       </p>
     </div>
   )
@@ -735,11 +735,12 @@ export default function App() {
     <div className="shell">
       <header className="top">
         <h1 className="logo">
-          Profiteur <span>of graaier?</span>
+          Jouw bijdrage aan <span>BV Nederland</span>
         </h1>
         <p className="lede">
-          Betaal je €1 belasting, dan ben je al een graaier. Ontdek waar jij
-          staat — en wat je bijdraagt én terugkrijgt.
+          Profiteur of graaier? Ontdek het snel — speels bedoeld, met echte
+          cijfers uit de Miljoenennota en toeslagenregels van 2026. Zie wat jij
+          bijdraagt én wat jij terugkrijgt.
         </p>
       </header>
 
