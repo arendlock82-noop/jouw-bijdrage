@@ -1,10 +1,25 @@
 /**
  * Bron totalen: Miljoenennota 2026 — Tabel 5 & 6
- * https://www.rijksfinancien.nl/miljoenennota/2026
- *
- * Top-inkomsten: samengevoegd tot ~6 leesbare bronnen (som ≈ 451,4 mld).
- * Uitgaven: top-potten o.b.v. Tabel 5 / ministeries (som = 462 mld).
+ * Persoonlijke bedragen: rules2026.js o.b.v. openbare kengetallen.
  */
+
+import {
+  calcCollegegeld,
+  calcDividendBelasting,
+  calcHuurtoeslagJaar,
+  calcKinderbijslagJaar,
+  calcKindgebondenBudgetJaar,
+  calcLoonPremies,
+  calcStudentBeursJaar,
+  calcVpb,
+  calcZorgtoeslagJaar,
+  estimateIndirectTaxes,
+  STUDENT,
+  toetsingsinkomen,
+} from './rules2026'
+
+export { sources, modelDisclaimer } from './sources'
+export { YEAR as RULES_YEAR } from './rules2026'
 
 export const BUDGET_YEAR = 2026
 
@@ -26,7 +41,7 @@ export const revenueStreams = [
     color: '#1F7A6C',
     hint: 'Loon-/inkomstenheffing + volks- & werknemerspremies (incl. Zvw)',
     detail:
-      'Grootste inkomstenbron van het Rijk (MN 2026). Jouw bedrag is een modelschatting o.b.v. bruto inkomen (schijven + premies).',
+      'MN 2026. Jouw bedrag volgt box 1-tarieven 2026 minus AHK/AK (Belastingdienst-tabellen).',
   },
   {
     id: 'btw',
@@ -35,7 +50,7 @@ export const revenueStreams = [
     color: '#2F6B9A',
     hint: 'Belasting op consumptie',
     detail:
-      'Officieel onderdeel van de belastingontvangsten. Jouw BTW is geschat o.b.v. consumptie/huur — niet je aanslag.',
+      'Landelijk MN-totaal. Jouw deel is een consumptieschatting — geen persoonlijke BTW-aangifte.',
   },
   {
     id: 'vpb',
@@ -43,8 +58,7 @@ export const revenueStreams = [
     mld: 42,
     color: '#C47A2C',
     hint: 'Winstbelasting bedrijven',
-    detail:
-      'Relevant bij een BV. Modelschatting: ~19% over ingevulde winst (vereenvoudigd).',
+    detail: 'Relevant bij een BV. Model: 19% tot €200.000 winst, daarna 25,8%.',
   },
   {
     id: 'accijns_invoer',
@@ -53,16 +67,16 @@ export const revenueStreams = [
     color: '#8A5A3A',
     hint: 'Brandstof, tabak, alcohol, douane/heffingen',
     detail:
-      'Accijnzen + invoer-/grensheffingen in de MN-totalen. Jouw deel is een grove schatting gekoppeld aan inkomen/verbruik.',
+      'MN-totaal. Jouw deel is een grove schatting gekoppeld aan inkomen/verbruik.',
   },
   {
     id: 'dividend',
-    label: 'Dividendbelasting',
+    label: 'Dividendbelasting / box 2',
     mld: 7,
     color: '#6B3A4A',
-    hint: 'Op uitgekeerde winst',
+    hint: 'Op uitgekeerde winst / aanmerkelijk belang',
     detail:
-      'Vooral bij DGA/aandeelhouders. Model: ~15% over ingevuld dividend.',
+      'Vereenvoudigd: ~24,6% over ingevuld dividend (box 2 laag tarief-indicatie).',
   },
   {
     id: 'overig_ink',
@@ -71,7 +85,7 @@ export const revenueStreams = [
     color: '#6B7280',
     hint: 'O.a. overdracht, motorrijtuigen, rest',
     detail:
-      'Restcategorie binnen de MN-belastingontvangsten (o.a. overdracht, MRB). Jouw deel is indicatief.',
+      'Restcategorie binnen de MN-belastingontvangsten. Jouw deel is indicatief.',
   },
 ]
 
@@ -84,7 +98,7 @@ export const spendStreams = [
     color: '#1F7A6C',
     hint: 'Zorguitgaven (Zvw, Wlz e.d.)',
     detail:
-      'MN 2026: circa €115 mld. Jouw deel = jouw totale belasting × (115 ÷ 462). Dat is wat jij meebetaalt aan de zorgpot — niet wat je aan zorg terugkrijgt.',
+      'MN 2026: circa €115 mld. Jouw deel = jouw totale belasting × (115 ÷ 462).',
   },
   {
     id: 'sociale',
@@ -93,7 +107,7 @@ export const spendStreams = [
     color: '#2F6B9A',
     hint: 'AOW, WW, bijstand, toeslagen, kinderopvang',
     detail:
-      'MN 2026: circa €116 mld. Inclusief AOW en toeslagen. Jouw bijdrage is een evenredig stukje van wat jij aan belasting/premies afdroeg.',
+      'MN 2026: circa €116 mld. Inclusief AOW en toeslagen.',
   },
   {
     id: 'ocw',
@@ -101,8 +115,7 @@ export const spendStreams = [
     mld: 55,
     color: '#C47A2C',
     hint: 'Onderwijs, cultuur en wetenschap',
-    detail:
-      'MN 2026: circa €55 mld voor OCW. Jouw meebetalen aan scholen/hogescholen/universiteiten volgt uit het aandeel van jouw belasting in dit potje.',
+    detail: 'MN 2026: circa €55 mld voor OCW.',
   },
   {
     id: 'bzk_gemeenten',
@@ -110,8 +123,7 @@ export const spendStreams = [
     mld: 51,
     color: '#4A7C59',
     hint: 'Gemeente- en Provinciefonds',
-    detail:
-      'MN 2026: circa €51 mld via Gemeente- en Provinciefonds. Lokale voorzieningen (o.a. jeugd, Wmo-deel, infra lokaal) — jouw evenredige bijdrage.',
+    detail: 'MN 2026: circa €51 mld via Gemeente- en Provinciefonds.',
   },
   {
     id: 'defensie',
@@ -119,8 +131,7 @@ export const spendStreams = [
     mld: 24,
     color: '#5C4A3A',
     hint: 'Incl. Defensiematerieelbegrotingsfonds',
-    detail:
-      'MN 2026: circa €24 mld (incl. DMF). Jouw bijdrage aan defensie = jouw belasting × (24 ÷ 462).',
+    detail: 'MN 2026: circa €24 mld (incl. DMF).',
   },
   {
     id: 'overig_uit',
@@ -129,11 +140,10 @@ export const spendStreams = [
     color: '#6B7280',
     hint: 'JenV, IenW, BZ, klimaat, asiel, financiën, …',
     detail:
-      'Rest tot €462 mld: o.a. Justitie & Veiligheid, Infrastructuur, Buitenlandse Zaken, klimaat, asiel. Jouw aandeel is evenredig verdeeld.',
+      'Rest tot €462 mld: o.a. Justitie & Veiligheid, Infrastructuur, Buitenlandse Zaken, klimaat, asiel.',
   },
 ]
 
-/** Verdeel betaalde belasting naar uitgavenpotjes (MN-verhoudingen). */
 export function allocatePaidToSpend(paidTotal) {
   const out = {}
   for (const s of spendStreams) {
@@ -142,9 +152,27 @@ export function allocatePaidToSpend(paidTotal) {
   return out
 }
 
+function emptyPersonaInputs() {
+  return {
+    brutoJaar: 0,
+    partnerBrutoJaar: 0,
+    hasPartner: false,
+    woningType: 'huur',
+    huurMaand: 0,
+    vermogen: 5000,
+    children: [],
+    isStudent: false,
+    studentWonen: 'uitwonend',
+    isOndernemer: false,
+    winstBv: 0,
+    dividend: 0,
+    /** Optioneel handmatig; leeg = auto */
+    kinderopvangJaarOverride: null,
+  }
+}
+
 /**
- * Persona-inputs: de rekenbasis die je ziet én kunt aanpassen.
- * paid/received worden hieruit afgeleid (simpel model).
+ * Persona-inputs: huishoudsituatie. Toeslagen/belasting volgen automatisch.
  */
 export const personas = [
   {
@@ -154,16 +182,14 @@ export const personas = [
     rank: 18,
     tagline: 'Lage belastingdruk, wél beurs, OV en vaak huurtoeslag.',
     inputs: {
+      ...emptyPersonaInputs(),
       brutoJaar: 9200,
+      hasPartner: false,
+      woningType: 'huur',
       huurMaand: 550,
-      uitwonendeBeurs: 439.20 * 12,
-      ovStudenten: 1200,
-      zorgtoeslagJaar: 1480,
-      huurtoeslagJaar: 2400,
-      collegegeld: 2530,
-      isOndernemer: false,
-      winstBv: 0,
-      dividend: 0,
+      vermogen: 2000,
+      isStudent: true,
+      studentWonen: 'uitwonend',
     },
   },
   {
@@ -173,18 +199,14 @@ export const personas = [
     rank: 34,
     tagline: 'Betaalt mee — en kan netto méér terugkrijgen via toeslagen.',
     inputs: {
+      ...emptyPersonaInputs(),
       brutoJaar: 28600,
+      hasPartner: false,
+      woningType: 'huur',
       huurMaand: 780,
-      uitwonendeBeurs: 0,
-      ovStudenten: 0,
-      zorgtoeslagJaar: 1200,
-      huurtoeslagJaar: 2600,
-      collegegeld: 0,
-      kindBudget: 3400,
-      kinderopvang: 4200,
-      isOndernemer: false,
-      winstBv: 0,
-      dividend: 0,
+      vermogen: 8000,
+      children: [{ age: 6 }],
+      kinderopvangJaarOverride: 4200,
     },
   },
   {
@@ -194,18 +216,14 @@ export const personas = [
     rank: 58,
     tagline: 'Stevige loonheffing; weinig toeslagen.',
     inputs: {
-      brutoJaar: 78000,
-      huurMaand: 1100,
-      uitwonendeBeurs: 0,
-      ovStudenten: 0,
-      zorgtoeslagJaar: 0,
-      huurtoeslagJaar: 0,
-      collegegeld: 0,
-      kindBudget: 2400,
-      kinderopvang: 0,
-      isOndernemer: false,
-      winstBv: 0,
-      dividend: 0,
+      ...emptyPersonaInputs(),
+      brutoJaar: 42000,
+      partnerBrutoJaar: 36000,
+      hasPartner: true,
+      woningType: 'koop',
+      huurMaand: 0,
+      vermogen: 25000,
+      children: [{ age: 8 }, { age: 11 }],
     },
   },
   {
@@ -215,15 +233,11 @@ export const personas = [
     rank: 72,
     tagline: 'Ook VPB en dividendbelasting, niet alleen loonheffing.',
     inputs: {
+      ...emptyPersonaInputs(),
       brutoJaar: 52000,
-      huurMaand: 1400,
-      uitwonendeBeurs: 0,
-      ovStudenten: 0,
-      zorgtoeslagJaar: 0,
-      huurtoeslagJaar: 0,
-      collegegeld: 0,
-      kindBudget: 0,
-      kinderopvang: 0,
+      hasPartner: false,
+      woningType: 'koop',
+      vermogen: 80000,
       isOndernemer: true,
       winstBv: 45000,
       dividend: 20000,
@@ -236,149 +250,175 @@ export const personas = [
     rank: 89,
     tagline: 'Hoge inleg, nauwelijks toeslagen.',
     inputs: {
-      brutoJaar: 148000,
-      huurMaand: 1600,
-      uitwonendeBeurs: 0,
-      ovStudenten: 0,
-      zorgtoeslagJaar: 0,
-      huurtoeslagJaar: 0,
-      collegegeld: 0,
-      kindBudget: 0,
-      kinderopvang: 0,
-      isOndernemer: false,
-      winstBv: 0,
+      ...emptyPersonaInputs(),
+      brutoJaar: 82000,
+      partnerBrutoJaar: 66000,
+      hasPartner: true,
+      woningType: 'koop',
+      vermogen: 120000,
+      children: [{ age: 14 }],
       dividend: 2000,
     },
   },
 ]
 
-/** Simpel, uitlegbaar model — geen Belastingdienst-engine. */
-export function computeFromInputs(inputs) {
-  const bruto = Number(inputs.brutoJaar) || 0
-  const huurJaar = (Number(inputs.huurMaand) || 0) * 12
+/** Afgeleide toeslagen/belastingen o.b.v. situatie. */
+export function deriveAmounts(inputs) {
+  const loonPremies =
+    calcLoonPremies(Number(inputs.brutoJaar) || 0) +
+    (inputs.hasPartner
+      ? calcLoonPremies(Number(inputs.partnerBrutoJaar) || 0)
+      : 0)
 
-  // Ruwe progressieve schets loonheffing + premies
-  let loonPremies = 0
-  if (bruto > 0) {
-    const schijf1 = Math.min(bruto, 38000) * 0.18
-    const schijf2 = Math.min(Math.max(bruto - 38000, 0), 37000) * 0.32
-    const schijf3 = Math.max(bruto - 75000, 0) * 0.42
-    loonPremies = Math.max(0, schijf1 + schijf2 + schijf3 - 2200)
+  const indirect = estimateIndirectTaxes(inputs)
+  const vpb = inputs.isOndernemer ? calcVpb(inputs.winstBv) : 0
+  const dividendBel = calcDividendBelasting(inputs.dividend)
+
+  const zorgtoeslag = calcZorgtoeslagJaar(inputs)
+  const huurtoeslag = calcHuurtoeslagJaar(inputs)
+  const kinderbijslag = calcKinderbijslagJaar(inputs.children)
+  const kindgebonden = calcKindgebondenBudgetJaar(inputs)
+  const beurs = calcStudentBeursJaar(inputs)
+  const collegegeld = calcCollegegeld(inputs)
+  const ov = inputs.isStudent ? STUDENT.ovIndicatieJaar : 0
+  const kop =
+    inputs.kinderopvangJaarOverride != null
+      ? Number(inputs.kinderopvangJaarOverride) || 0
+      : 0
+
+  return {
+    loonPremies,
+    btw: indirect.btw,
+    vpb,
+    accijns: indirect.accijns,
+    overig: indirect.overig,
+    dividendBel,
+    zorgtoeslag,
+    huurtoeslag,
+    kinderbijslag,
+    kindgebonden,
+    beurs,
+    collegegeld,
+    ov,
+    kop,
+    toetsingsinkomen: toetsingsinkomen(inputs),
   }
+}
 
-  const btw = Math.round(huurJaar * 0.05 + Math.max(bruto, 8000) * 0.08)
-  const accijnsInvoer = Math.round(180 + bruto * 0.004)
-  const overigInk = Math.round(120 + bruto * 0.003)
-
-  const vpb = inputs.isOndernemer
-    ? Math.round(Math.max(0, (Number(inputs.winstBv) || 0) * 0.19))
-    : 0
-  const dividendBel =
-    Math.round(Math.max(0, (Number(inputs.dividend) || 0) * 0.15)) +
-    (inputs.isOndernemer ? Math.round(Math.max(0, (Number(inputs.dividend) || 0) * 0.0)) : 0)
+export function computeFromInputs(inputs) {
+  const d = deriveAmounts(inputs)
 
   const paid = {
-    loon_premies: Math.round(loonPremies),
-    btw,
-    vpb,
-    accijns_invoer: accijnsInvoer,
-    dividend: dividendBel,
-    overig_ink: overigInk,
+    loon_premies: d.loonPremies,
+    btw: d.btw,
+    vpb: d.vpb,
+    accijns_invoer: d.accijns,
+    dividend: d.dividendBel,
+    overig_ink: d.overig,
   }
 
-  const beurs = Number(inputs.uitwonendeBeurs) || 0
-  const ov = Number(inputs.ovStudenten) || 0
-  const zorgtoeslag = Number(inputs.zorgtoeslagJaar) || 0
-  const huurtoeslag = Number(inputs.huurtoeslagJaar) || 0
-  const kind = Number(inputs.kindBudget) || 0
-  const kop = Number(inputs.kinderopvang) || 0
-  const college = Number(inputs.collegegeld) || 0
-
-  /**
-   * Wat je “terugkrijgt”: toeslagen + waarde van publieke voorzieningen.
-   * Onderwijs: niet alleen collegegeld — PO/VO/HO kosten de samenleving veel
-   * meer (indicatieve jaarkosten o.b.v. publieke bekostiging).
-   */
   const benefits = []
 
-  if (huurtoeslag > 0) {
+  if (d.huurtoeslag > 0) {
     benefits.push({
       id: 'huurtoeslag',
       label: 'Huurtoeslag',
-      amount: huurtoeslag,
+      amount: d.huurtoeslag,
       color: '#2F6B9A',
-      tip: 'Directe toeslag via de Belastingdienst / Toeslagen.',
+      tip: 'Berekend met Wet op de huurtoeslag 2026 (huur, inkomen, huishoudgrootte).',
+      auto: true,
     })
   }
-  if (zorgtoeslag > 0) {
+  if (d.zorgtoeslag > 0) {
     benefits.push({
       id: 'zorgtoeslag',
       label: 'Zorgtoeslag',
-      amount: zorgtoeslag,
+      amount: d.zorgtoeslag,
       color: '#1F7A6C',
-      tip: 'Bijdrage in de zorgpremie bij lager inkomen.',
+      tip: 'Berekend met grenzen/maxima 2026 (Dienst Toeslagen).',
+      auto: true,
     })
   }
-  if (beurs > 0) {
+  if (d.beurs > 0) {
     benefits.push({
       id: 'beurs',
-      label: 'Uitwonende basisbeurs',
-      amount: Math.round(beurs),
+      label: 'Basisbeurs (DUO)',
+      amount: d.beurs,
       color: '#C47A2C',
-      tip: 'Studiefinanciering (DUO) — cash-inkomen uit de collectieve pot.',
+      tip: 'Officieel DUO-bedrag 2026 × 12 maanden.',
+      auto: true,
     })
   }
-  if (ov > 0) {
+  if (d.ov > 0) {
     benefits.push({
       id: 'ov',
-      label: 'OV-studentenreisproduct',
-      amount: ov,
+      label: 'OV-studentenreisproduct (indicatie)',
+      amount: d.ov,
       color: '#4A7C59',
-      tip: 'Waarde van het studenten-OV, bekostigd via OCW/mobiliteit.',
+      tip: 'Indicatie van de jaarwaarde — geen officiële DUO-prijslijst.',
+      auto: true,
     })
   }
-  if (kind > 0) {
+  if (d.kinderbijslag > 0) {
     benefits.push({
-      id: 'kind',
-      label: 'Kinderbijslag / kindgebonden budget',
-      amount: kind,
+      id: 'kinderbijslag',
+      label: 'Kinderbijslag (SVB)',
+      amount: d.kinderbijslag,
       color: '#2F6B9A',
-      tip: 'Gezinsondersteuning via SZW.',
+      tip: 'SVB-bedragen 2026 naar leeftijd van elk kind.',
+      auto: true,
     })
   }
-  if (kop > 0) {
+  if (d.kindgebonden > 0) {
+    benefits.push({
+      id: 'kgb',
+      label: 'Kindgebonden budget',
+      amount: d.kindgebonden,
+      color: '#5C6BC0',
+      tip: 'Wet kindgebonden budget 2026 (basis + leeftijd + alleenstaande ouder, afbouw 7,6%).',
+      auto: true,
+    })
+  }
+  if (d.kop > 0) {
     benefits.push({
       id: 'kop',
-      label: 'Kinderopvangtoeslag',
-      amount: kop,
+      label: 'Kinderopvangtoeslag (handmatig)',
+      amount: d.kop,
       color: '#6B3A4A',
-      tip: 'Vergoeding kinderopvang — vaak een groot deel van de kosten.',
+      tip: 'Nog niet automatisch: hangt af van uren, tarief en ouderbijdragetabel. Handmatig ingevuld.',
+      auto: false,
     })
   }
 
-  // Publiek onderwijs (imputed): student in HO / kind in PO-VO
-  if (college > 0) {
-    const hoPubliek = 9800 // ruwe publieke bekostiging per student per jaar
+  if (d.collegegeld > 0) {
+    const hoPubliek = 9800
     benefits.push({
       id: 'ho',
       label: 'Publiek bekostigd hoger onderwijs',
       amount: hoPubliek,
       color: '#C47A2C',
-      tip: `Indicatie: de samenleving steekt ±€${hoPubliek.toLocaleString('nl-NL')} per student/jaar in HO — naast jouw collegegeld van ${euro(college)}.`,
-    })
-  }
-  if (kind > 0 || kop > 0) {
-    const poVo = 8600 // ruwe bekostiging basisschool/VO per kind/jaar
-    benefits.push({
-      id: 'povo',
-      label: 'Basisschool / VO (publiek, per kind)',
-      amount: poVo,
-      color: '#C47A2C',
-      tip: `Onderwijs is “gratis”, maar kost de overheid ±€${poVo.toLocaleString('nl-NL')} per kind per jaar (indicatie bekostiging).`,
+      tip: `Indicatie publieke bekostiging per HO-student/jaar — naast wettelijk collegegeld ${euro(d.collegegeld)}.`,
+      auto: true,
     })
   }
 
-  // Iedereen: impliciet aandeel zorg (lager bij hoge inkomens iets genormaliseerd)
+  const schoolKids = (inputs.children || []).filter((c) => {
+    const a = Number(c.age)
+    return !Number.isNaN(a) && a >= 4 && a <= 17
+  }).length
+  if (schoolKids > 0) {
+    const poVo = 8600
+    benefits.push({
+      id: 'povo',
+      label: `Basisschool / VO (publiek, ${schoolKids} kind${schoolKids > 1 ? 'eren' : ''})`,
+      amount: poVo * schoolKids,
+      color: '#C47A2C',
+      tip: `Indicatie ±€${poVo.toLocaleString('nl-NL')} publieke bekostiging per kind/jaar.`,
+      auto: true,
+    })
+  }
+
+  const bruto = toetsingsinkomen(inputs)
   const zorgImputed = Math.round(
     2200 + Math.min(bruto, 60000) * 0.008 - (bruto > 100000 ? 400 : 0),
   )
@@ -388,20 +428,20 @@ export function computeFromInputs(inputs) {
       label: 'Zorg via collectieve middelen',
       amount: zorgImputed,
       color: '#1F7A6C',
-      tip: 'Indicatie van zorg die via premies/belastingen collectief wordt gefinancierd — niet je zorgtoeslag.',
+      tip: 'Indicatie collectief gefinancierde zorg — niet je zorgtoeslag.',
+      auto: true,
     })
   }
 
   const receivedTotal = benefits.reduce((a, b) => a + b.amount, 0)
 
-  // Voor ladder / oude mapping: aggregate naar potjes
   const received = {
     zorg: benefits
       .filter((b) => b.id === 'zorgtoeslag' || b.id === 'zorg_imputed')
       .reduce((a, b) => a + b.amount, 0),
     sociale: benefits
       .filter((b) =>
-        ['huurtoeslag', 'beurs', 'kind', 'kop'].includes(b.id),
+        ['huurtoeslag', 'beurs', 'kinderbijslag', 'kgb', 'kop'].includes(b.id),
       )
       .reduce((a, b) => a + b.amount, 0),
     ocw: benefits
@@ -416,24 +456,11 @@ export function computeFromInputs(inputs) {
     paid,
     received,
     benefits,
+    derived: d,
     paidTotal: Object.values(paid).reduce((a, b) => a + b, 0),
     receivedTotal,
   }
 }
-
-export const inputFields = [
-  { key: 'brutoJaar', label: 'Bruto inkomen / jaar', step: 100 },
-  { key: 'huurMaand', label: 'Huur / maand', step: 10 },
-  { key: 'uitwonendeBeurs', label: 'Uitwonende beurs / jaar', step: 50 },
-  { key: 'ovStudenten', label: 'OV-student / jaar', step: 50 },
-  { key: 'zorgtoeslagJaar', label: 'Zorgtoeslag / jaar', step: 50 },
-  { key: 'huurtoeslagJaar', label: 'Huurtoeslag / jaar', step: 50 },
-  { key: 'kindBudget', label: 'Kindregelingen / jaar', step: 50 },
-  { key: 'kinderopvang', label: 'Kinderopvangtoeslag / jaar', step: 50 },
-  { key: 'collegegeld', label: 'Collegegeld / jaar', step: 50 },
-  { key: 'winstBv', label: 'Winst BV / jaar', step: 100 },
-  { key: 'dividend', label: 'Dividend / jaar', step: 100 },
-]
 
 export function euro(n) {
   return new Intl.NumberFormat('nl-NL', {
@@ -452,5 +479,8 @@ export function mld(n) {
 }
 
 export function cloneInputs(inputs) {
-  return { ...inputs }
+  return {
+    ...inputs,
+    children: (inputs.children || []).map((c) => ({ ...c })),
+  }
 }
